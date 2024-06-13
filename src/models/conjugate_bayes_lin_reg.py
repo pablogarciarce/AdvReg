@@ -53,8 +53,10 @@ class FlatPriorLinearRegression(ConjugateProbabilisticModel):
             Multivariate normal distribution representing the predictive distribution.
         """
         mean = X_test @ self.mu
-        cov = torch.diag(torch.ones(X_test.shape[0])) + X_test @ self.v @ X_test.T
-        return MultivariateNormal(mean, cov)
+        var = 1 + torch.sum((X_test @ self.v) * X_test, dim=1)
+        cov = torch.diag(var)
+        
+        return MultivariateNormal(mean.squeeze(), cov)
 
     def sample_predictive_distribution(self, X_test: torch.Tensor, num_samples: int):
         """
@@ -75,36 +77,4 @@ class FlatPriorLinearRegression(ConjugateProbabilisticModel):
 
 
 if __name__ == "__main__":
-    # Generate some synthetic data
-    n = 100
-    p = 2
-    X = np.random.randn(n, p)
-    beta = np.array([1.0, 2.0])
-    sigma = 1.0
-    y = X @ beta + np.random.randn(n) * sigma
-
-    # Fit the model
-    model = FlatPriorLinearRegression()
-    data = {'X': torch.tensor(X, dtype=torch.float32), 'y': torch.tensor(y, dtype=torch.float32)}
-    model.fit(data)
-
-    # Predict
-    X_test = np.random.randn(10, p)
-    y_test = X_test @ beta
-    predictive_dist = model.get_predictive_distribution(torch.tensor(X_test, dtype=torch.float32))
-    samples = predictive_dist.sample((100,))
-
-    # Get the mean and variances of the predictive distribution
-    mean = predictive_dist.mean
-    variance = predictive_dist.variance 
-
-    # Plot test data, true regression line, predictive mean and 95% probability interval
-    plt.scatter(X_test[:, 0], y_test, label='True regression line')
-    plt.scatter(X_test[:, 0], mean, label='Predictive mean')
-    plt.fill_between(X_test[:, 0], mean - 1.96 * variance, 
-        mean + 1.96 * variance, alpha=0.2, label='95% probability interval')
-    plt.legend()
-    plt.show()
-
-
- 
+    pass
