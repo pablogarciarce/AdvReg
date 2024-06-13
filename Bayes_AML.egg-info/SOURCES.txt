@@ -1,5 +1,0 @@
-setup.py
-Bayes_AML.egg-info/PKG-INFO
-Bayes_AML.egg-info/SOURCES.txt
-Bayes_AML.egg-info/dependency_links.txt
-Bayes_AML.egg-info/top_level.txt
