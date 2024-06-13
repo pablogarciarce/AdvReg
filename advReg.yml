@@ -1,4 +1,4 @@
-name: advReg
+name: AdvReg
 channels:
   - conda-forge
   - defaults
