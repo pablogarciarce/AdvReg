@@ -55,8 +55,10 @@ class FlatPriorLinearRegression(ConjugateProbabilisticModel):
         mean = X_test @ self.mu
         var = 1 + torch.sum((X_test @ self.v) * X_test, dim=1)
         cov = torch.diag(var)
+        if len(mean.shape) != 1:
+            mean = mean.squeeze()
         
-        return MultivariateNormal(mean.squeeze(), cov)
+        return MultivariateNormal(mean, cov)
 
     def sample_predictive_distribution(self, X_test: torch.Tensor, num_samples: int):
         """
