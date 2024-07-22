@@ -81,7 +81,7 @@ class FlatPriorLinearRegression(ConjugateProbabilisticModel):
 
 class NormalInverseGammaPriorLinearRegression(ConjugateProbabilisticModel):
     """
-    The model is given by y = Xβ + ε, with ε ~ N(0, 1) with priors 
+    The model is given by y = Xβ + ε, with ε ~ N(0, σ^2) with priors 
     β ~ N(μ, σ^2 Lambda^(-1)) and σ^2 ~ IG(a, b).
     """
 
@@ -132,8 +132,8 @@ class NormalInverseGammaPriorLinearRegression(ConjugateProbabilisticModel):
             Test data features.
 
         Returns:
-        torch.distributions.MultivariateNormal
-            Multivariate normal distribution representing the predictive distribution.
+        torch.distributions.StudentT
+            Student-t distribution representing the predictive distribution.
         """
         mean = X_test.T @ self.mu
         var = self.b / self.a * (1 + (X_test.T @ torch.linalg.inv(self.lam)) @ X_test)
@@ -141,6 +141,80 @@ class NormalInverseGammaPriorLinearRegression(ConjugateProbabilisticModel):
             mean = mean.squeeze()
         
         return StudentT(2 * self.a, mean, var)
+
+    def sample_predictive_distribution(self, X_test: torch.Tensor, num_samples: int):
+        """
+        Sample from the predictive distribution.
+
+        Parameters:
+        - X_test: torch.Tensor
+            Test data features.
+        - num_samples: int
+            Number of samples to draw.
+
+        Returns:
+        torch.Tensor
+            Samples from the predictive distribution.
+        """
+        predictive_dist = self.get_predictive_distribution(X_test)
+        return predictive_dist.sample((num_samples,))
+
+
+class NormalKnownVariancePriorLinearRegression(ConjugateProbabilisticModel):
+    """
+    The model is given by y = Xβ + ε, with ε ~ N(0, σ^2) with prior
+    β ~ N(μ, Lambda^(-1)) and σ^2 known.
+    """
+
+    def __init__(self, prior_params: dict = None) -> None:
+        """
+        Initialize the model.
+
+        Parameters:
+        - prior_params: dictionary of prior parameters which keys 
+        are string (name of the parameters) and values are torch tensors
+        """
+        if prior_params is None:
+            prior_params = {}
+        self.mu = prior_params.get('mu', None)
+        self.lam = prior_params.get('lam', None)
+        self.sigma2 = prior_params.get('sigma2', None)
+
+    def fit(self, data: dict) -> None:
+        """
+        Compute posterior parameters.
+
+        Parameters:
+        - data: dictionary containing 'X' (features) and 'y' (targets)
+        """
+        X = data['X']
+        y = data['y']
+
+        lam_n = self.lam + X.T @ X / self.sigma2
+        mu_n = (self.lam @ self.mu + X.T @ y / self.sigma2)
+        mu_n = torch.linalg.inv(lam_n) @ mu_n
+
+        self.mu = mu_n
+        self.lam = lam_n
+
+    def get_predictive_distribution(self, X_test: torch.Tensor):
+        """
+        Predict using the fitted model.
+
+        Parameters:
+        - X_test: torch.Tensor
+            Test data features.
+
+        Returns:
+        torch.distributions.MultivariateNormal
+            Multivariate normal distribution representing the predictive distribution.
+        """
+        mean = X_test.T @ self.mu
+        var = self.sigma2 + ((X_test.T @ torch.linalg.inv(self.lam)) @ X_test)
+        if len(mean.shape) != 1:
+            mean = mean.squeeze()
+        
+        return MultivariateNormal(mean, var)
 
     def sample_predictive_distribution(self, X_test: torch.Tensor, num_samples: int):
         """
