@@ -58,3 +58,18 @@ class ConjugateProbabilisticModel(ABC):
             Samples from the predictive distribution.
         """
         pass
+
+    @abstractmethod
+    def sample_posterior_distribution(self, num_samples: int):
+        """
+        Sample from the posterior distribution.
+
+        Parameters:
+        - num_samples: int
+            Number of samples to draw.
+
+        Returns:
+        torch.Tensor
+            Samples from the posterior distribution.
+        """
+        pass

@@ -158,6 +158,25 @@ class NormalInverseGammaPriorLinearRegression(ConjugateProbabilisticModel):
         """
         predictive_dist = self.get_predictive_distribution(X_test)
         return predictive_dist.sample((num_samples,))
+    
+    def sample_posterior_distribution(self, num_samples: int):
+        """
+        Sample from the posterior distribution.
+
+        Parameters:
+        - num_samples: int
+            Number of samples to draw.
+
+        Returns:
+        torch.Tensor
+            Samples from the posterior distribution.
+        """
+        sigma2 = torch.distributions.InverseGamma(self.a, self.b).sample((num_samples,)).view(1, 1, num_samples)
+        cov_matrix = torch.inverse(self.lam).unsqueeze(2) * sigma2
+        betas = [MultivariateNormal(self.mu, cov_matrix[:, :, i]).sample((1,)).squeeze() for i in range(num_samples)]
+        beta = torch.stack(betas, dim=1)
+
+        return beta, sigma2  # TODO CHECK DIMENSIONS
 
 
 class NormalKnownVariancePriorLinearRegression(ConjugateProbabilisticModel):
@@ -233,6 +252,21 @@ class NormalKnownVariancePriorLinearRegression(ConjugateProbabilisticModel):
         """
         predictive_dist = self.get_predictive_distribution(X_test)
         return predictive_dist.sample((num_samples,))
+    
+    def sample_posterior_distribution(self, num_samples: int):
+        """
+        Sample from the posterior distribution.
+
+        Parameters:
+        - num_samples: int
+            Number of samples to draw.
+
+        Returns:
+        torch.Tensor
+            Samples from the posterior distribution.
+        """
+        beta = MultivariateNormal(self.mu, torch.inverse(self.lam)).sample((num_samples,)).transpose(0, 1)
+        return beta, self.sigma2
 
 
 if __name__ == "__main__":
