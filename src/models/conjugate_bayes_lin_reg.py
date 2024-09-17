@@ -175,8 +175,7 @@ class NormalInverseGammaPriorLinearRegression(ConjugateProbabilisticModel):
         cov_matrix = torch.inverse(self.lam).unsqueeze(2) * sigma2
         betas = [MultivariateNormal(self.mu, cov_matrix[:, :, i]).sample((1,)).squeeze() for i in range(num_samples)]
         beta = torch.stack(betas, dim=1)
-
-        return beta, sigma2  # TODO CHECK DIMENSIONS
+        return beta, sigma2.squeeze(0)
 
 
 class NormalKnownVariancePriorLinearRegression(ConjugateProbabilisticModel):
