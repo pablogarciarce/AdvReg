@@ -227,7 +227,6 @@ class NormalKnownVariancePriorLinearRegression(ConjugateProbabilisticModel):
         torch.distributions.MultivariateNormal
             Multivariate normal distribution representing the predictive distribution.
         """
-        X_test = X_test.unsqueeze(1)
         mean = X_test.T @ self.mu
         var = self.sigma2 + ((X_test.T @ torch.linalg.inv(self.lam)) @ X_test)
         if len(mean.shape) != 1:
@@ -265,7 +264,7 @@ class NormalKnownVariancePriorLinearRegression(ConjugateProbabilisticModel):
             Samples from the posterior distribution.
         """
         beta = MultivariateNormal(self.mu, torch.inverse(self.lam)).sample((num_samples,)).transpose(0, 1)
-        return beta, self.sigma2
+        return beta, self.sigma2 * torch.ones((1, num_samples))
 
 
 if __name__ == "__main__":
