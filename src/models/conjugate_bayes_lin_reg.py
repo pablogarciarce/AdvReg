@@ -113,7 +113,7 @@ class NormalInverseGammaPriorLinearRegression(ConjugateProbabilisticModel):
         n = X.shape[0]
 
         lam_n = self.lam + X.T @ X
-        mu_n = (self.lam @ self.mu + X.T @ y)
+        mu_n = self.lam @ self.mu + X.T @ y
         mu_n = torch.linalg.inv(lam_n) @ mu_n
         a_n = self.a + n / 2
         b_n = self.b + 0.5 * (y.T @ y + self.mu.T @ self.lam @ self.mu - mu_n.T @ lam_n @ mu_n)
@@ -136,10 +136,7 @@ class NormalInverseGammaPriorLinearRegression(ConjugateProbabilisticModel):
             Student-t distribution representing the predictive distribution.
         """
         mean = X_test.T @ self.mu
-        var = self.b / self.a * (1 + (X_test.T @ torch.linalg.inv(self.lam)) @ X_test)
-        if len(mean.shape) != 1:
-            mean = mean.squeeze()
-        
+        var = self.b / self.a * (1 + (X_test.T @ torch.linalg.inv(self.lam)) @ X_test).squeeze(1)
         return StudentT(2 * self.a, mean, var)
 
     def sample_predictive_distribution(self, X_test: torch.Tensor, num_samples: int):
@@ -173,7 +170,7 @@ class NormalInverseGammaPriorLinearRegression(ConjugateProbabilisticModel):
         """
         sigma2 = torch.distributions.InverseGamma(self.a, self.b).sample((num_samples,)).view(1, 1, num_samples)
         cov_matrix = torch.inverse(self.lam).unsqueeze(2) * sigma2
-        betas = [MultivariateNormal(self.mu, cov_matrix[:, :, i]).sample((1,)).squeeze() for i in range(num_samples)]
+        betas = [MultivariateNormal(self.mu.squeeze(), cov_matrix[:, :, i]).sample((1,)).squeeze() for i in range(num_samples)]
         beta = torch.stack(betas, dim=1)
         return beta, sigma2.squeeze(0)
 
