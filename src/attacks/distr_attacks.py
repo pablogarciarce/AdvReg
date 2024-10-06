@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from torch.optim import SGD
+from torch.optim import SGD, Adam
 from joblib import Parallel, delayed
 import time
 
@@ -101,30 +101,30 @@ def mlmc_gradient_estimator(y, x, R, model, M0=1, tau=1., n_jobs=50):
     return sum(estimates) / R
 
 # Attack function to use the gradient estimator for maximum disruption
-def mlmc_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=.1, R=100, early_stopping_patience=10):
+def mlmc_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=.1, R=100, early_stopping_patience=10, verbose=True,
+                optimizer='Adam', momentum=0.5, dampening=0.95):
     """
     Function to perform the attack using the MLMC gradient estimator.
     :param appd: Attacker predictive posterior distribution to approximate. If None -> Maximum disruption attack.
     """
     x_adv_values = []
     patience = 0
-    x_adv = (x + torch.randn_like(x) * 0.0001).clone().requires_grad_(True)  # add some noise to the input
-    optimizer = SGD([x_adv], lr=lr)
+    x_adv = (x + torch.randn_like(x) * 0.01).clone().requires_grad_(True)  # add some noise to the input
+    if optimizer == 'SGD':
+        optimizer = SGD([x_adv], lr=lr, momentum=momentum, dampening=dampening)
+    elif optimizer == 'Adam':
+        optimizer = Adam([x_adv], lr=lr)
+    else: 
+        raise ValueError('Optimizer not recognized')
 
     for it in range(n_iter):
         x_adv.requires_grad = True
         optimizer.zero_grad()
         if appd is None:
             y = model.sample_predictive_distribution(x, num_samples=1)
-        else:
-            y = appd.sample()
-        start = time.time()
-        if appd is None:
             x_adv.grad = mlmc_gradient_estimator(y, x_adv, R, model)
         else:
-            x_adv.grad = - mlmc_gradient_estimator(y, x_adv, R, model)  # If appd is not None, we want to minimize the loss
-        if time.time() - start > 2:
-            print(f'Long gradient estimation time: {time.time() - start} for iteration {it}')
+            x_adv.grad = -mlmc_gradient_estimator(appd.sample(), x_adv, R, model)
         optimizer.step()
         x_adv.grad.zero_()
         
@@ -134,10 +134,11 @@ def mlmc_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=.1, R=100, ea
             
         x_adv_values.append(x_adv.clone().detach().numpy())
 
-        if it > 2 and np.linalg.norm(x_adv_values[-1] - x_adv_values[-2]) < 1e-3:
+        if (it > 2 and np.linalg.norm(x_adv_values[-1] - x_adv_values[-2]) < 1e-4):
             patience += 1
             if patience >= early_stopping_patience:
-                print(f'Early stopping at iteration {it}')
+                if verbose: 
+                    print(f'Early stopping at iteration {it}')
                 break
         else:
             patience = 0

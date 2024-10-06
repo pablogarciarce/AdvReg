@@ -25,7 +25,7 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3, num
     func_values = []
     early_stopping_it = 0
 
-    optimizer = SGD([x_adv], lr=learning_rate)
+    optimizer = SGD([x_adv], lr=learning_rate, momentum=0.9)
 
     for _ in range(num_iterations):
         x_adv.requires_grad = True
@@ -47,7 +47,7 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3, num
                 break
         else:
             early_stopping_it = 0            
-        x_adv_values.append(x_adv.cpu().clone().detach().numpy())
+        x_adv_values.append(x_adv.clone().detach().numpy())
         loss_values.append(loss.item())
         func_values.append(f_mean.item())
 
