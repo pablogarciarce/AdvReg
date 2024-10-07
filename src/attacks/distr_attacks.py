@@ -102,16 +102,16 @@ def mlmc_gradient_estimator(y, x, R, model, M0=1, tau=1., n_jobs=50):
 
 # Attack function to use the gradient estimator for maximum disruption
 def mlmc_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=.1, R=100, early_stopping_patience=10, verbose=True,
-                optimizer='Adam', momentum=0.5, dampening=0.95):
+                optimizer='Adam'):
     """
     Function to perform the attack using the MLMC gradient estimator.
     :param appd: Attacker predictive posterior distribution to approximate. If None -> Maximum disruption attack.
     """
     x_adv_values = []
     patience = 0
-    x_adv = (x + torch.randn_like(x) * 0.01).clone().requires_grad_(True)  # add some noise to the input
+    x_adv = (x + torch.randn_like(x) * 0.0001).clone().requires_grad_(True)  # add some noise to the input
     if optimizer == 'SGD':
-        optimizer = SGD([x_adv], lr=lr, momentum=momentum, dampening=dampening)
+        optimizer = SGD([x_adv], lr=lr, momentum=.5, dampening=.95)
     elif optimizer == 'Adam':
         optimizer = Adam([x_adv], lr=lr)
     else: 
@@ -151,7 +151,7 @@ def fgsm_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=.1, R=100, ea
     Function to perform the FGSM attack using the MLMC gradient estimator.
     :param appd: Attacker predictive posterior distribution to approximate. If None -> Maximum disruption attack.
     """
-    x_adv = (x + torch.randn_like(x) * 0.0001).clone().requires_grad_(True)
+    x_adv = (x + torch.randn_like(x) * 0.00001).clone().requires_grad_(True)
     optimizer = SGD([x_adv], lr=lr)
 
     x_adv.requires_grad = True

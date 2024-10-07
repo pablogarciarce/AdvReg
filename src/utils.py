@@ -9,10 +9,24 @@ def get_toy_data(n_samples=1000):
     np.random.seed(0)
 
     A = np.array([[1, 2], [3, 4]])
-    Ad = A @ A.T
+    Ad = A.T @ A
     X = np.random.multivariate_normal([0, 0], Ad, n_samples)
 
     beta = np.random.multivariate_normal([1, 2], np.eye(2))
+
+    y = X @ beta + np.random.normal(0, 1, n_samples)
+
+    return X, y
+
+def get_toy_data_indep(n_samples=1000):
+    # Create toy dataset with 2 features and dependence y = beta0*x1 + beta1*x2 + epsilon with
+    # epsilon ~ N(0, 1) and beta ~ N([1, 2], A) with A some random positive definite matrix
+    np.random.seed(0)
+
+    Ad = np.eye(2)
+    X = np.random.multivariate_normal([0, 0], Ad, n_samples)
+
+    beta = np.random.multivariate_normal([-1, 2], np.eye(2))
 
     y = X @ beta + np.random.normal(0, 1, n_samples)
 
@@ -78,3 +92,19 @@ def plot_ppds(model, x, x_adv_distr, appd=None, num_samples=100000, ax=None):
         ax.legend()
         ax.set_xlabel('y')
         return ax
+
+def l2_projection(x, x_0, epsilon):
+    return x_0 + epsilon * (x - x_0) / torch.norm(x - x_0, p=2)
+
+def l1_projection(x, x_0, epsilon):
+    delta = x - x_0  
+    abs_delta = torch.abs(delta)  
+    if torch.sum(abs_delta) > epsilon:
+        sorted_delta, _ = torch.sort(abs_delta.view(-1), descending=True)
+        cumsum_delta = torch.cumsum(sorted_delta, dim=0)
+        rho = torch.nonzero(sorted_delta * torch.arange(1, len(sorted_delta)+1).float() > (cumsum_delta - epsilon)).max()
+        theta = (cumsum_delta[rho] - epsilon) / (rho + 1)
+        delta = torch.sign(delta) * torch.max(abs_delta - theta, torch.zeros_like(abs_delta))
+    return x_0 + delta
+
+

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.optim import SGD
 
-from src.utils import id
+from src.utils import id, l1_projection, l2_projection
 
 
 
@@ -17,7 +17,7 @@ def reparametrization_trick(x_adv, model, G, samples_per_iteration, func):
     
     return x_adv.grad, f_values.mean(), loss
 
-def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3, num_iterations=1000, epsilon=.1, func=id, early_stopping_patience=10):
+def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3, num_iterations=1000, epsilon=.1, func=id, early_stopping_patience=10, projection=l2_projection):
     x_0 = x_clean.clone().detach()
     x_adv = (x_clean + torch.randn_like(x_clean) * 0.0002).clone().detach().requires_grad_(True)
     x_adv_values = []
@@ -38,7 +38,7 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3, num
         
         with torch.no_grad():
             if torch.norm(x_adv - x_0, p=2) > epsilon:
-                x_adv = x_0 + epsilon * (x_adv - x_0) / torch.norm(x_adv - x_0, p=2)
+                x_adv = projection(x_adv, x_0, epsilon)
 
         # Early stopping
         if torch.norm(x_adv - old_x_adv, p=2) < 1e-5:
