@@ -26,7 +26,7 @@ def get_toy_data_indep(n_samples=1000):
     Ad = np.eye(2)
     X = np.random.multivariate_normal([0, 0], Ad, n_samples)
 
-    beta = np.random.multivariate_normal([-1, 2], np.eye(2))
+    beta = np.array([-1, 2])
 
     y = X @ beta + np.random.normal(0, 1, n_samples)
 

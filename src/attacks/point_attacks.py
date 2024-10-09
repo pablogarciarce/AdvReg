@@ -19,7 +19,7 @@ def reparametrization_trick(x_adv, model, G, samples_per_iteration, func):
 
 def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3, num_iterations=1000, epsilon=.1, func=id, early_stopping_patience=10, projection=l2_projection):
     x_0 = x_clean.clone().detach()
-    x_adv = (x_clean + torch.randn_like(x_clean) * 0.0002).clone().detach().requires_grad_(True)
+    x_adv = (x_clean + torch.randn_like(x_clean) * 0.002).clone().detach().requires_grad_(True)
     x_adv_values = []
     loss_values = []
     func_values = []
@@ -92,7 +92,7 @@ def attack_true_grad(x_clean, model, G, samples_per_iteration=1000, learning_rat
 
 def attack_fgsm(x_clean, model, G, samples_per_iteration=1000, learning_rate=1e-3, num_iterations=1000, epsilon=.1, func=id, early_stopping_patience=10):
     x_0 = x_clean.clone().detach()
-    x_adv = (x_clean + torch.randn_like(x_clean) * 0.0002).clone().detach().requires_grad_(True)
+    x_adv = (x_clean + torch.randn_like(x_clean) * 0.002).clone().detach().requires_grad_(True)
 
     optimizer = torch.optim.SGD([x_adv], lr=learning_rate)
 

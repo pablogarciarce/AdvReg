@@ -108,13 +108,13 @@ class BayesianNN:
         # Create predictive function
         predictive = Predictive(self.model, self.posterior_samples)
         if num_samples is None: 
-            mean = predictive(jax.random.PRNGKey(1), X_test)['obs']
-            mean = torch.tensor(jax.device_get(mean), dtype=torch.float32)
-            mean = mean.mean(axis=0)
+            y = predictive(jax.random.PRNGKey(1), X_test)['obs']
+            y = torch.tensor(jax.device_get(y), dtype=torch.float32)
+            y = y.mean(axis=0)
         else:
-            mean = predictive(jax.random.PRNGKey(1), X_test)['obs'][:num_samples, :]
-            mean = torch.tensor(jax.device_get(mean), dtype=torch.float32)
-        return torch.distributions.Normal(mean, self.sigma2)
+            y = predictive(jax.random.PRNGKey(1), X_test)['obs'][:num_samples, :]
+            y = torch.tensor(jax.device_get(y), dtype=torch.float32)
+        return y
 
     def sample_predictive_distribution(self, X_test, num_samples):
         """
