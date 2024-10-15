@@ -6,13 +6,17 @@ from src.utils import id, l1_projection, l2_projection
 
 
 
-def reparametrization_trick(x_adv, model, G, samples_per_iteration, func):
+def reparametrization_trick(x_adv, model, G, samples_per_iteration, func, x_0=None):
     # Sample from the model's predictive distribution keeping the gradient flow by using rsample
     y_samples = model.get_predictive_distribution(x_adv.unsqueeze(1)).rsample((samples_per_iteration,))
     
     # Using autograd to compute the gradients
     f_values = func(x_adv, y_samples)
-    loss = ((f_values - G) ** 2).mean()
+    if x_0 is not None:
+        f_0 = func(x_0, model.get_predictive_distribution(x_0.unsqueeze(1)).rsample((samples_per_iteration,)))
+        loss = -((f_values - f_0) ** 2).mean()
+    else:
+        loss = ((f_values - G) ** 2).mean()
     loss.backward()
     
     return x_adv.grad, f_values.mean(), loss
@@ -31,7 +35,10 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3, num
         x_adv.requires_grad = True
         old_x_adv = x_adv.clone().detach()
 
-        _, f_mean, loss = reparametrization_trick(x_adv, model, G, samples_per_iteration, func=func)
+        if G is None:
+            _, f_mean, loss = reparametrization_trick(x_adv, model, G, samples_per_iteration, func, x_0)
+        else:
+            _, f_mean, loss = reparametrization_trick(x_adv, model, G, samples_per_iteration, func)
 
         optimizer.step()
         x_adv.grad.zero_()
@@ -98,7 +105,11 @@ def attack_fgsm(x_clean, model, G, samples_per_iteration=1000, learning_rate=1e-
 
     x_adv.requires_grad = True
 
-    _, f_mean, loss = reparametrization_trick(x_adv, model, G, samples_per_iteration, func=func)
+    if G is None:
+        _, f_mean, loss = reparametrization_trick(x_adv, model, G, samples_per_iteration, func, x_0)
+    else:
+        _, f_mean, loss = reparametrization_trick(x_adv, model, G, samples_per_iteration, func=func)
+        
     x_adv.grad = x_adv.grad.sign()
     optimizer.step()
     x_adv.grad.zero_()
