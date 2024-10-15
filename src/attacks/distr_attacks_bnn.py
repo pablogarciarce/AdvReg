@@ -87,7 +87,7 @@ def delta_g_x_l(y, x, l, model, M_sequence):
     return g_l - (g_l_minus_1_a + g_l_minus_1_b) / 2
 
 # Estimate the gradient using MLMC in parallel with joblib
-def mlmc_gradient_estimator(y, x, R, model, M0=1, tau=1.):
+def mlmc_gradient_estimator(y, x, R, model, M0=1, tau=1.1):
     # Define sequence M_l
     M_sequence = [M0*2**l for l in range(17)]
 
