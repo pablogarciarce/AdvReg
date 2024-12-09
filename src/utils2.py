@@ -4,15 +4,14 @@ import numpy as np
 import jax.numpy as jnp
 
 def plot_ppds(model, x, x_adv_distr, rng, appd=None, num_samples=100000, ax=None):  
-    y_samples = model.sample_predictive_distribution(x, num_samples=num_samples)
-    y_adv_samples = model.sample_predictive_distribution(x_adv_distr, num_samples=num_samples)
+    y_samples = model.sample_predictive_distribution(x, num_samples=num_samples).squeeze()
+    y_adv_samples = model.sample_predictive_distribution(x_adv_distr, num_samples=num_samples).squeeze()
     if appd is not None:
-        y_appd_samples = appd.sample(rng, (num_samples, 1))
-    print(y_samples.shape)
-    kde = gaussian_kde(y_samples.T)
-    kde_adv = gaussian_kde(y_adv_samples.T)
+        y_appd_samples = appd.sample(rng, (num_samples, 1)).squeeze()
+    kde = gaussian_kde(y_samples)
+    kde_adv = gaussian_kde(y_adv_samples)
     if appd is not None:
-        kde_appd = gaussian_kde(y_appd_samples.T)
+        kde_appd = gaussian_kde(y_appd_samples)
 
     if ax is None:
         plt.hist(y_samples, bins=50, alpha=0.5, label='Original', density=True)

@@ -35,7 +35,6 @@ class BayesianNN:
         with numpyro.plate("data", X.shape[0]):
             numpyro.sample("obs", dist.Normal(output, jnp.sqrt(sigma2)), obs=Y)
 
-
     def fit(self, X, Y, num_warmup=500, num_samples=500, num_chains=4):
         """
         Fits the BNN model using MCMC.
@@ -58,7 +57,8 @@ class BayesianNN:
 
         # Aggregate predictions
         if num_samples is not None:
-            predictions = predictions[:num_samples]
+            indices = random.choice(random.PRNGKey(2), len(predictions), (num_samples,))
+            predictions = predictions[indices]
         else:
             predictions = predictions.mean(axis=0)
         return predictions
@@ -89,7 +89,42 @@ class BayesianNN:
         with open(path, "rb") as f:
             self.posterior_samples = pickle.load(f)
 
+class DBNN(BayesianNN):
+    def __init__(self, input_dim, hidden_units=10):
+        """
+        Initialize the BNN class with the input dimension and number of hidden units.
+        """
+        super().__init__(input_dim, hidden_units)
 
+    def model(self, X, Y=None):
+        """
+        Defines the probabilistic model for the Bayesian Neural Network with 3 hidden layers.
+        Each hidden layer has 30 neurons.
+        """
+        # Priors for weights and biases for each layer
+        w1 = numpyro.sample("w1", dist.Normal(0, 1).expand([self.input_dim, self.hidden_units]))  # First hidden layer weights
+        b1 = numpyro.sample("b1", dist.Normal(0, 1).expand([self.hidden_units]))  # First hidden layer biases
+
+        w2 = numpyro.sample("w2", dist.Normal(0, 1).expand([self.hidden_units, self.hidden_units]))  # Second hidden layer weights
+        b2 = numpyro.sample("b2", dist.Normal(0, 1).expand([self.hidden_units]))  # Second hidden layer biases
+
+        w3 = numpyro.sample("w3", dist.Normal(0, 1).expand([self.hidden_units, self.hidden_units]))  # Third hidden layer weights
+        b3 = numpyro.sample("b3", dist.Normal(0, 1).expand([self.hidden_units]))  # Third hidden layer biases
+
+        w4 = numpyro.sample("w4", dist.Normal(0, 1).expand([self.hidden_units, 1]))  # Output layer weights
+        b4 = numpyro.sample("b4", dist.Normal(0, 1))  # Output layer bias
+
+        sigma2 = numpyro.sample("sigma2", dist.Gamma(2.0, 2.0))  # Prior for variance
+
+        # Forward pass through the hidden layers
+        hidden1 = jax.nn.relu(jnp.dot(X, w1) + b1)  # First hidden layer
+        hidden2 = jax.nn.relu(jnp.dot(hidden1, w2) + b2)  # Second hidden layer
+        hidden3 = jax.nn.relu(jnp.dot(hidden2, w3) + b3)  # Third hidden layer
+        output = jnp.dot(hidden3, w4) + b4  # Output layer
+
+        # Likelihood for regression
+        with numpyro.plate("data", X.shape[0]):
+            numpyro.sample("obs", dist.Normal(output, jnp.sqrt(sigma2)), obs=Y)
 
 class BayesianNNVI:
     def __init__(self, input_dim, hidden_units=10):
@@ -211,34 +246,5 @@ class BayesianNNVI:
             self.posterior_samples = pickle.load(f)
 
 
-"""
-    def model_big(self, X, Y=None):
-        
-        Defines the probabilistic model for the Bayesian Neural Network with 3 hidden layers.
-        Each hidden layer has 30 neurons.
-        
-        # Priors for weights and biases for each layer
-        w1 = numpyro.sample("w1", dist.Normal(0, 1).expand([self.input_dim, self.hidden_units]))  # First hidden layer weights
-        b1 = numpyro.sample("b1", dist.Normal(0, 1).expand([self.hidden_units]))  # First hidden layer biases
 
-        w2 = numpyro.sample("w2", dist.Normal(0, 1).expand([self.hidden_units, self.hidden_units]))  # Second hidden layer weights
-        b2 = numpyro.sample("b2", dist.Normal(0, 1).expand([self.hidden_units]))  # Second hidden layer biases
-
-        w3 = numpyro.sample("w3", dist.Normal(0, 1).expand([self.hidden_units, self.hidden_units]))  # Third hidden layer weights
-        b3 = numpyro.sample("b3", dist.Normal(0, 1).expand([self.hidden_units]))  # Third hidden layer biases
-
-        w4 = numpyro.sample("w4", dist.Normal(0, 1).expand([self.hidden_units, 1]))  # Output layer weights
-        b4 = numpyro.sample("b4", dist.Normal(0, 1))  # Output layer bias
-
-        sigma2 = numpyro.sample("sigma2", dist.Gamma(2.0, 2.0))  # Prior for variance
-
-        # Forward pass through the hidden layers
-        hidden1 = jax.nn.relu(jnp.dot(X, w1) + b1)  # First hidden layer
-        hidden2 = jax.nn.relu(jnp.dot(hidden1, w2) + b2)  # Second hidden layer
-        hidden3 = jax.nn.relu(jnp.dot(hidden2, w3) + b3)  # Third hidden layer
-        output = jnp.dot(hidden3, w4) + b4  # Output layer
-
-        # Likelihood for regression
-        with numpyro.plate("data", X.shape[0]):
-            numpyro.sample("obs", dist.Normal(output, jnp.sqrt(sigma2)), obs=Y)
-"""
+    
