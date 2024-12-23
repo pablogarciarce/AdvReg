@@ -49,7 +49,7 @@ def outer_step(x_adv, opt_state, inner_nn_params, y, model, num_samples, outer_o
     return x_adv, opt_state, loss
 
 def wasserstein_attack(model, x, appd, rng, epsilon=0.2, num_samples=100, inner_lr=0.01, inner_iter=100,
-                       outer_lr=0.01, patience_eps=1e-3, max_iter=1000):
+                       outer_lr=0.01, patience_eps=1e-3, max_iter=1000, verbose=False):
     """Perform the Wasserstein attack using JAX."""
     x_adv = x + random.normal(rng, x.shape) * 0.0001
     x_adv_values = []
@@ -98,5 +98,6 @@ def wasserstein_attack(model, x, appd, rng, epsilon=0.2, num_samples=100, inner_
         dif = jnp.linalg.norm(x_adv - x_adv_old, ord=2)
         ite += 1
 
-    print(f"Converged in {ite} iterations.")
+    if verbose:
+        print(f"Converged in {ite} iterations.")
     return x_adv, x_adv_values

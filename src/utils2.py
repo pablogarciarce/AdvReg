@@ -56,3 +56,25 @@ def plot_ppds(model, x, x_adv_distr, rng, appd=None, num_samples=100000, ax=None
         ax.legend()
         ax.set_xlabel('y')
         return ax
+    
+def l2_projection(x, x_0, epsilon):
+    """Realiza la proyección L2."""
+    delta = x - x_0
+    norm_delta = jnp.linalg.norm(delta, ord=2)
+    if norm_delta > epsilon:
+        delta = epsilon * delta / norm_delta
+    return x_0 + delta
+
+
+def l1_projection(x, x_0, epsilon):
+    """Realiza la proyección L1."""
+    delta = x - x_0
+    abs_delta = jnp.abs(delta)
+    if jnp.sum(abs_delta) > epsilon:
+        sorted_delta = jnp.sort(abs_delta.ravel())[::-1]
+        cumsum_delta = jnp.cumsum(sorted_delta)
+        indices = jnp.arange(1, len(sorted_delta) + 1)
+        rho = jnp.max(jnp.nonzero(sorted_delta * indices > (cumsum_delta - epsilon))[0])
+        theta = (cumsum_delta[rho] - epsilon) / (rho + 1)
+        delta = jnp.sign(delta) * jnp.maximum(abs_delta - theta, 0)
+    return x_0 + delta
