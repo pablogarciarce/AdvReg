@@ -36,18 +36,20 @@ plt.rcParams.update({
 })
 
 import numpyro
-numpyro.set_host_device_count(8)
+numpyro.set_host_device_count(18)
 
-# load MNIST data without tensorflow
 from sklearn.datasets import fetch_openml
 
-# Load notMNIST data without labels
 import os
 from PIL import Image
+from joblib import Parallel, delayed
+
 
 
 
 def main():
+    # load MNIST data without tensorflow
+
     # Load MNIST from OpenML
     mnist = fetch_openml('mnist_784', version=1)
     X, y = mnist.data.values, mnist.target.values
@@ -58,6 +60,7 @@ def main():
     X_train, X_test = X[:60000], X[60000:]
     y_train, y_test = y[:60000], y[60000:]
 
+    # Load notMNIST data without labels
     # Ruta de la carpeta con imágenes
     folder_path = '../data/notMNIST_small'
 
@@ -75,8 +78,43 @@ def main():
 
     X_notmnist = np.array(images).reshape(-1, 28*28) / 255.0
 
-
     # Attack MNIST data to rise the entropy of the predictive distribution
+    path = '/Users/pgarc/projects/AdvReg/src/models/weights/DE/mnist'
+    model = DeepEnsemble(input_dim=X_train.shape[1], hidden_units=200, output_dim=10, num_models=20, model_type='mnist_mlp')
+    try:
+        model.load(path)
+    except FileNotFoundError:
+        print('Not model found, fitting the model') 
+        model.fit(
+            X_train,
+            y_train,
+            300,
+            batch_size=2048
+        )
+        model.save(path)
+
+    def entropy(x, logits):
+        pred = jax.nn.softmax(logits, axis=1).mean(axis=0)
+        entr = (jax.scipy.special.entr(pred) / jax.numpy.log(2)).sum()
+        return entr
+
+    entropies = []
+    def process(x):
+        x = jax.numpy.array(x.reshape(1, -1))
+        G = 5  # we want to rise the entropy of the predictive distribution
+        x_adv_values, loss_values, func_values = attack(x, model, G, func=entropy, samples_per_iteration=20)
+        logits = model.sample_predictive_distribution(x_adv_values[-1], 20)
+        pred = jax.nn.softmax(logits, axis=1).mean(axis=0)
+        return (jax.scipy.special.entr(pred) / jax.numpy.log(2)).sum()
+
+    entropies = Parallel(n_jobs=-1)(delayed(process)(x) for x in tqdm(X_test[:100]))
+
+    sns.histplot(jnp.array(entropies), kde=True, bins=10, color='black', alpha=0.)
+    #save the figure
+    plt.savefig('entropy_mnist.png')
+    plt.plot()
+
+    # Attack notMNIST data to lower the entropy of the predictive distribution
     path = '/Users/pgarc/projects/AdvReg/src/models/weights/DE/mnist'
     model = DeepEnsemble(input_dim=X_train.shape[1], hidden_units=200, output_dim=10, num_models=20, model_type='mnist_mlp')
     model.load(path)
@@ -86,18 +124,20 @@ def main():
         entr = (jax.scipy.special.entr(pred) / jax.numpy.log(2)).sum()
         return entr
 
-    entropies = []
-    for x in tqdm(X_test[:100]):
-        x = jax.numpy.array(x.reshape(1,-1))
-        G = 5 # we want to rise the entropy of the predictive distribution
+    def process(x):
+        x = jax.numpy.array(x.reshape(1, -1))
+        G = 0  # we want to lower the entropy of the predictive distribution
         x_adv_values, loss_values, func_values = attack(x, model, G, func=entropy, samples_per_iteration=20)
         logits = model.sample_predictive_distribution(x_adv_values[-1], 20)
         pred = jax.nn.softmax(logits, axis=1).mean(axis=0)
-        entropies.append((jax.scipy.special.entr(pred) / jax.numpy.log(2)).sum())
+        return (jax.scipy.special.entr(pred) / jax.numpy.log(2)).sum()
+
+    entropies = Parallel(n_jobs=-1)(delayed(process)(x) for x in tqdm(X_notmnist[:100]))
 
     sns.histplot(jnp.array(entropies), kde=True, bins=10, color='black', alpha=0.)
+    plt.savefig('entropy_notmnist.png')
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
