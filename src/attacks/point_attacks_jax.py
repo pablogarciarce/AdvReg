@@ -4,6 +4,7 @@ from jax import grad, jit
 from jax.random import normal
 from src.utils import id
 from src.utils2 import l1_projection, l2_projection
+import optax
 
 
 def reparametrization_trick(x_adv, model, G, samples_per_iteration, func, x_0=None):
@@ -33,14 +34,22 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3,
     x_adv_values, loss_values, func_values = [], [], []
     early_stopping_it = 0
 
+    # Initialize the Adam optimizer
+    optimizer = optax.adam(learning_rate)
+    opt_state = optimizer.init(x_adv)
+
     for _ in range(num_iterations):
+        x_old = x_adv.copy()
         grad_loss, f_mean, loss = reparametrization_trick(x_adv, model, G, samples_per_iteration, func)
-        x_adv -= learning_rate * grad_loss
+        
+        # Update the adversarial example using the Adam optimizer
+        updates, opt_state = optimizer.update(grad_loss, opt_state)
+        x_adv = optax.apply_updates(x_adv, updates)
 
         if jnp.linalg.norm(x_adv - x_0, ord=2) > epsilon:
             x_adv = projection(x_adv, x_0, epsilon)
 
-        if jnp.linalg.norm(x_adv - x_0) < 1e-5:
+        if jnp.linalg.norm(x_adv - x_old) < 1e-5:
             early_stopping_it += 1
             if early_stopping_it > early_stopping_patience:
                 if verbose:

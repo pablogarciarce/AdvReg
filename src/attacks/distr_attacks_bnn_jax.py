@@ -63,7 +63,7 @@ def g_x_M(y, x, gamma_samples):
     numerator = grad_pi(y, x, gamma_samples)
     pi_vals = pi(y, x, gamma_samples)
     denominator = pi_vals.mean()
-    return numerator / denominator
+    return numerator / (denominator + 1e-8)
 
 
 def delta_g_x_l(y, x, l, model, M_sequence):
