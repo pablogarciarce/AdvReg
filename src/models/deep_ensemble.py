@@ -106,7 +106,7 @@ class DeepEnsemble(nnx.Module):
             def loss_fn(model, X, y):
                 y_pred = model(X)
                 # Softmax cross-entropy loss    
-                loss = optax.softmax_cross_entropy_with_integer_labels(logits=y_pred, labels=y)
+                loss = optax.softmax_cross_entropy(logits=y_pred, labels=y)
                 return jnp.mean(loss)
         else:   
             def loss_fn(model, X, y):
@@ -120,14 +120,24 @@ class DeepEnsemble(nnx.Module):
         optimizer.update(grad)
         return optimizer, loss
 
+    def sample_predictive_distribution_logits(self, X, num_samples=10):
+        """
+        Computes the ensemble prediction for given inputs.
+        """
+        predictions = [model(X)[0] for model in self.models]
+        indexes = jax.random.randint(jax.random.PRNGKey(0), (num_samples,), 0, len(predictions))
+        logits = jnp.array([predictions[i] for i in indexes])
+        return logits
+
     def sample_predictive_distribution(self, X, num_samples=10):
         """
         Computes the ensemble prediction for given inputs.
         """
         predictions = [model(X)[0] for model in self.models]
-        if len(predictions) < num_samples: 
-            raise ValueError("Number of samples must be less than or equal to the number of models")
-        return jnp.array(predictions[:num_samples])
+        indexes = jax.random.randint(jax.random.PRNGKey(0), (num_samples,), 0, len(predictions))
+        logits = jnp.array([predictions[i] for i in indexes])
+        probs = jax.nn.softmax(logits, axis=1)
+        return probs
     
     def save(self, path):
         """

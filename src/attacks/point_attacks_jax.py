@@ -2,8 +2,7 @@ import jax
 import jax.numpy as jnp
 from jax import grad, jit
 from jax.random import normal
-from src.utils import id
-from src.utils2 import l1_projection, l2_projection
+from src.utils import id, l1_projection, l2_projection
 import optax
 
 

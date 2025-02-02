@@ -119,7 +119,13 @@ def id(x, y):
 def expy2(x, y):
     return torch.exp(y ** 2 / 100)
 
-def plot_ppds_torch(model, x, x_adv_distr, appd=None, num_samples=100000, ax=None):  
+
+
+
+
+############################################################################################################
+
+def _torch_plot_ppds(model, x, x_adv_distr, appd=None, num_samples=100000, ax=None):  
     y_samples = model.sample_predictive_distribution(x, num_samples=num_samples).numpy()
     y_adv_samples = model.sample_predictive_distribution(x_adv_distr, num_samples=num_samples).numpy()
     if appd is not None:
@@ -174,10 +180,10 @@ def plot_ppds_torch(model, x, x_adv_distr, appd=None, num_samples=100000, ax=Non
         ax.set_xlabel('y')
         return ax
 
-def l2_projection(x, x_0, epsilon):
+def _torch_l2_projection(x, x_0, epsilon):
     return x_0 + epsilon * (x - x_0) / torch.norm(x - x_0, p=2)
 
-def l1_projection(x, x_0, epsilon):
+def _torch_l1_projection(x, x_0, epsilon):
     delta = x - x_0  
     abs_delta = torch.abs(delta)  
     if torch.sum(abs_delta) > epsilon:
