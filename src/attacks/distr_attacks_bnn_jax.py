@@ -30,6 +30,20 @@ def pi(y, x, gamma):
     """
     Compute pi(y | x, gamma).
     """
+    if 'sigma2' not in gamma:  # Classification
+        w1 = gamma['w1']
+        b1 = gamma['b1']
+        w2 = gamma['w2']
+        b2 = gamma['b2']
+        hidden = jnp.dot(x, w1) + b1
+        hidden = jax.nn.relu(hidden)
+        logits = jnp.dot(hidden, w2) + b2
+        logits = logits.diagonal(axis1=1, axis2=2)
+        probs = jax.nn.softmax(logits, axis=1)
+        probs = jnp.clip(probs, 1e-6, 1)  # Avoid zero probabilities
+        probs = probs / probs.sum(axis=1, keepdims=True) # Normalize
+        return probs[:, y, :]
+
     w1 = gamma['w1']
     b1 = gamma['b1']
     w2 = gamma['w2']

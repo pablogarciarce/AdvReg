@@ -41,7 +41,7 @@ def grad_pi(y, x, model, M):
     Compute the gradient of pi(y | x, gamma) with respect to x.
     """
     def pi_loss(x):
-        return pi(y, x, model, M).mean()
+        return pi(y, x, model, M).mean() 
     
     return grad(pi_loss)(x)
 
@@ -102,6 +102,7 @@ def mlmc_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=0.1, R=100, e
     opt_state = opt.init(x_adv)
 
     # Store adversarial examples and set patience counter
+
     x_adv_values = []
     patience = 0
 

@@ -12,7 +12,7 @@ def plot_ppds(model, x, x_adv_distr, rng, appd=None, num_samples=100000, ax=None
     y_samples = model.sample_predictive_distribution(x, num_samples=num_samples).squeeze()
     y_adv_samples = model.sample_predictive_distribution(x_adv_distr, num_samples=num_samples).squeeze()
     if appd is not None:
-        y_appd_samples = appd.sample(rng, num_samples).squeeze()
+        y_appd_samples = appd.sample(rng, (num_samples,)).squeeze()
     kde = gaussian_kde(y_samples)
     kde_adv = gaussian_kde(y_adv_samples)
     if appd is not None:
@@ -117,7 +117,7 @@ def id(x, y):
     return y
 
 def expy2(x, y):
-    return torch.exp(y ** 2 / 100)
+    return jnp.exp(y ** 2 / 100)
 
 
 

@@ -32,13 +32,13 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3,
     x_adv = x_clean + 0.002 * normal(key, shape=x_clean.shape)
     x_adv_values, loss_values, func_values = [], [], []
     early_stopping_it = 0
+    best_loss = jnp.inf
 
     # Initialize the Adam optimizer
     optimizer = optax.adam(learning_rate)
     opt_state = optimizer.init(x_adv)
 
     for _ in range(num_iterations):
-        x_old = x_adv.copy()
         grad_loss, f_mean, loss = reparametrization_trick(x_adv, model, G, samples_per_iteration, func)
         
         # Update the adversarial example using the Adam optimizer
@@ -48,14 +48,13 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3,
         if jnp.linalg.norm(x_adv - x_0, ord=2) > epsilon:
             x_adv = projection(x_adv, x_0, epsilon)
 
-        if jnp.linalg.norm(x_adv - x_old) < 1e-5:
-            early_stopping_it += 1
-            if early_stopping_it > early_stopping_patience:
-                if verbose:
-                    print("Early stopping")
-                break
-        else:
+        if loss < best_loss:
+            best_loss = loss
             early_stopping_it = 0
+        else:
+            early_stopping_it += 1
+            if early_stopping_it == early_stopping_patience:
+                break
 
         x_adv_values.append(x_adv.copy())
         loss_values.append(float(loss))
