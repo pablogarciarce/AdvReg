@@ -80,13 +80,13 @@ def g_x_M(y, x, gamma_samples):
     return numerator / (denominator + 1e-8)
 
 
-def delta_g_x_l(y, x, l, model, M_sequence):
+def delta_g_x_l(rng, y, x, l, model, M_sequence):
     """
     Compute Δg_{x, l}(y).
     """
     M_l = M_sequence[l]
     M_l_minus_1 = M_sequence[l-1] if l > 0 else 0
-    gamma_samples_l = model.sample_posterior_distribution(M_l)
+    gamma_samples_l = model.sample_posterior_distribution(rng, M_l)
     gamma_samples_l_minus_1_a = {k: v[:M_l_minus_1] for k, v in gamma_samples_l.items()}
     gamma_samples_l_minus_1_b = {k: v[M_l_minus_1:] for k, v in gamma_samples_l.items()}
     
@@ -96,7 +96,7 @@ def delta_g_x_l(y, x, l, model, M_sequence):
     return g_l - (g_l_minus_1_a + g_l_minus_1_b) / 2
 
 
-def mlmc_gradient_estimator(y, x, R, model, M0=10, tau=1.1):
+def mlmc_gradient_estimator(rng, y, x, R, model, M0=10, tau=1.1):
     """
     Estimate the gradient using MLMC.
     """
@@ -104,7 +104,7 @@ def mlmc_gradient_estimator(y, x, R, model, M0=10, tau=1.1):
     omega = jnp.array([2**(-tau * l) for l in range(len(M_sequence))])
     omega /= omega.sum()
     l_indices = jax.random.choice(jax.random.PRNGKey(0), len(M_sequence), shape=(R,), p=omega)
-    estimates = jnp.array([delta_g_x_l(y, x, l, model, M_sequence) / omega[l] for l in l_indices])
+    estimates = jnp.array([delta_g_x_l(rng, y, x, l, model, M_sequence) / omega[l] for l in l_indices])
     return estimates.mean(axis=0)
 
 
@@ -142,11 +142,13 @@ def mlmc_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=0.1, R=100, e
         # Compute gradient using MLMC
         if appd is None:
             y = model.sample_predictive_distribution(x, num_samples=1)
-            grad = mlmc_gradient_estimator(y, x_adv, R, model)
+            rng, mlmc_rng = jax.random.split(rng)
+            grad = mlmc_gradient_estimator(mlmc_rng, y, x_adv, R, model)
         else:
             rng, sample_rng = jax.random.split(rng)
             y = appd.sample(sample_rng)
-            grad = -mlmc_gradient_estimator(y, x_adv, R, model)
+            rng, mlmc_rng = jax.random.split(rng)
+            grad = -mlmc_gradient_estimator(mlmc_rng, y, x_adv, R, model)
             
         # Perform optimization step
         x_adv, opt_state = update_step(x_adv, opt_state, grad)

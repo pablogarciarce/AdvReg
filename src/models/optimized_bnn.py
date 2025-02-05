@@ -44,33 +44,34 @@ class BayesianNN:
         self.mcmc.run(random.PRNGKey(0), X, Y)
         self.posterior_samples = self.mcmc.get_samples()
 
-    def sample_predictive_distribution(self, X_test, num_samples=None):
+    def sample_predictive_distribution(self, rng, X_test, num_samples=None):
         """
         Computes the predictive distribution for given test inputs.
         """
         if self.posterior_samples is None:
             raise RuntimeError("You must call 'fit' before making predictions.")
 
+        rng, rng_pred = random.split(rng)
         # Create predictive function
         predictive = Predictive(self.model, self.posterior_samples)
-        predictions = predictive(random.PRNGKey(1), X_test)["obs"]
+        predictions = predictive(rng_pred, X_test)["obs"]
 
         # Aggregate predictions
         if num_samples is not None:
-            indices = random.choice(random.PRNGKey(2), len(predictions), (num_samples,))
+            indices = random.choice(rng, len(predictions), (num_samples,))
             predictions = predictions[indices]
         else:
             predictions = predictions.mean(axis=0)
         return predictions
     
-    def sample_posterior_distribution(self, num_samples):
+    def sample_posterior_distribution(self, rng, num_samples):
         """
         Samples from the posterior distribution.
         """
         if self.posterior_samples is None:
             raise RuntimeError("You must call 'fit' before sampling from the posterior.")
 
-        indices = random.choice(random.PRNGKey(2), len(self.posterior_samples["w1"]), (num_samples,))
+        indices = random.choice(rng, len(self.posterior_samples["w1"]), (num_samples,))
         sampled_posterior = {k: v[indices] for k, v in self.posterior_samples.items()}
         return sampled_posterior
 
@@ -184,9 +185,9 @@ class RegBayesianNNVI:
         self.svi_result = svi.get_params(svi_state)
 
         # Sample from the posterior to store the samples
-        self.posterior_samples = self._sample_posterior_distribution(num_samples=100000)
+        self.posterior_samples = self._sample_posterior_distribution(random.PRNGKey(0), num_samples=100000)
 
-    def sample_predictive_distribution(self, X_test, num_samples=100):
+    def sample_predictive_distribution(self, rng, X_test, num_samples=100):
         """
         Computes the predictive distribution for given test inputs.
         """
@@ -195,12 +196,12 @@ class RegBayesianNNVI:
 
         # Create predictive function
         predictive = Predictive(self.model, guide=self.guide, params=self.svi_result, num_samples=num_samples)
-        predictions = predictive(random.PRNGKey(1), X_test)["obs"]
+        predictions = predictive(rng, X_test)["obs"]
 
         # Aggregate predictions
         return predictions
     
-    def _sample_posterior_distribution(self, num_samples=100):
+    def _sample_posterior_distribution(self, rng, num_samples=100):
         """
         Samples from the posterior distribution.
         """
@@ -209,17 +210,17 @@ class RegBayesianNNVI:
 
         # Use the guide to sample posterior distributions
         predictive = Predictive(self.guide, params=self.svi_result, num_samples=num_samples)
-        posterior_samples = predictive(random.PRNGKey(1), data=None)
+        posterior_samples = predictive(rng, data=None)
         return posterior_samples
     
-    def sample_posterior_distribution(self, num_samples):
+    def sample_posterior_distribution(self, rng, num_samples):
         """
         Samples from the posterior distribution.
         """
         if self.posterior_samples is None:
             raise RuntimeError("You must call 'fit' before sampling from the posterior.")
 
-        indices = random.choice(random.PRNGKey(2), len(self.posterior_samples["w1"]), (num_samples,))
+        indices = random.choice(rng, len(self.posterior_samples["w1"]), (num_samples,))
         sampled_posterior = {k: v[indices] for k, v in self.posterior_samples.items()}
         return sampled_posterior
     
@@ -284,7 +285,7 @@ class ClasBayesianNNVI(RegBayesianNNVI):
         Fits the BNN model using Variational Inference (VI).
         """
         # Define guide for VI
-        self.guide = autoguide.AutoMultivariateNormal(self.model) #  AutoBNAFNormal and AutoIAFNormal 
+        self.guide = autoguide.AutoLowRankMultivariateNormal(self.model) #  AutoBNAFNormal and AutoIAFNormal 
 
         # Set up the optimizer and loss function
         optimizer = numpyro.optim.Adam(step_size=lr)
@@ -309,7 +310,7 @@ class ClasBayesianNNVI(RegBayesianNNVI):
         # Sample from the posterior to store the samples
         self.posterior_samples = self._sample_posterior_distribution(num_samples=100000)
 
-    def sample_predictive_distribution(self, X_test, num_samples=100):
+    def sample_predictive_distribution_probs(self, rng, X_test, num_samples=100):
         """
         Computes the predictive distribution for given test inputs.
         """
@@ -318,7 +319,7 @@ class ClasBayesianNNVI(RegBayesianNNVI):
 
         # Create predictive function
         predictive = Predictive(self.model, guide=self.guide, params=self.svi_result, num_samples=num_samples)
-        samples = predictive(random.PRNGKey(1), X_test)
+        samples = predictive(rng, X_test)
 
         # Extract probabilities
         probs = samples["probs"]  # Shape: (num_samples, batch_size, num_classes)
