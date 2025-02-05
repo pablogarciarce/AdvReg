@@ -325,3 +325,54 @@ class ClasBayesianNNVI(RegBayesianNNVI):
         probs = samples["probs"]  # Shape: (num_samples, batch_size, num_classes)
 
         return probs
+    
+    
+class ClasBayesianNN(BayesianNN):
+    def __init__(self, input_dim, hidden_units=10, num_classes=10):
+        """
+        Initialize the BNN class with the input dimension and number of hidden units.
+        """
+        super().__init__(input_dim, hidden_units)
+        self.num_classes = num_classes
+
+    def model(self, X, Y=None):
+        """
+        Defines the probabilistic model for the Bayesian Neural Network.
+        """
+        if Y is not None and Y.ndim == 2:
+            Y = jnp.argmax(Y, axis=1) 
+        # Priors for weights and biases
+        w1 = numpyro.sample("w1", dist.Normal(0, 1).expand([self.input_dim, self.hidden_units]))
+        b1 = numpyro.sample("b1", dist.Normal(0, 1).expand([self.hidden_units]))
+        w2 = numpyro.sample("w2", dist.Normal(0, 1).expand([self.hidden_units, self.num_classes]))
+        b2 = numpyro.sample("b2", dist.Normal(0, 1).expand([self.num_classes]))
+
+        # Forward pass
+        hidden = jax.nn.relu(jnp.dot(X, w1) + b1)
+        logits = jnp.dot(hidden, w2) + b2
+        probs = jax.nn.softmax(logits)
+        probs = jnp.clip(probs, 1e-6, 1)  # Avoid zero probabilities
+        probs = probs / probs.sum(axis=-1, keepdims=True) # Normalize
+
+        numpyro.deterministic("probs", probs)
+
+        # Likelihood for classification
+        with numpyro.plate("data", X.shape[0]):
+            numpyro.sample("obs", dist.Categorical(probs=probs), obs=Y)
+
+    def sample_predictive_distribution_probs(self, rng, X_test, num_samples=100):
+        """
+        Computes the predictive distribution for given test inputs.
+        """
+        if self.svi_result is None:
+            raise RuntimeError("You must call 'fit' before making predictions.")
+
+        # Create predictive function
+        predictive = Predictive(self.model, guide=self.guide, params=self.svi_result, num_samples=num_samples)
+        samples = predictive(rng, X_test)
+
+        # Extract probabilities
+        probs = samples["probs"]  # Shape: (num_samples, batch_size, num_classes)
+
+        return probs
+    
