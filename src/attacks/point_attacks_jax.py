@@ -18,10 +18,7 @@ def reparametrization_trick(rng, x_adv, model, G, samples_per_iteration, func, x
             return jnp.mean((f_values - G) ** 2)
 
     grad_loss = grad(loss_fn)(x_adv)
-    y_samples = model.sample_predictive_distribution_probs(rng, x_adv, samples_per_iteration)
-    f_values = func(x_adv, y_samples)
-    loss = loss_fn(x_adv)
-    return grad_loss, jnp.mean(f_values), loss
+    return grad_loss, loss_fn
 
 
 
@@ -41,7 +38,7 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3,
 
     for _ in range(num_iterations):
         rng, rep_rng = jax.random.split(rng)
-        grad_loss, f_mean, loss = reparametrization_trick(rep_rng, x_adv, model, G, samples_per_iteration, func)
+        grad_loss, loss_fn = reparametrization_trick(rep_rng, x_adv, model, G, samples_per_iteration, func)
         
         # Update the adversarial example using the Adam optimizer
         updates, opt_state = optimizer.update(grad_loss, opt_state)
@@ -50,6 +47,8 @@ def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3,
         if jnp.linalg.norm(x_adv - x_0, ord=2) > epsilon:
             x_adv = projection(x_adv, x_0, epsilon)
 
+        f_mean = jnp.mean(func(x_adv, model.sample_predictive_distribution_probs(rep_rng, x_adv, samples_per_iteration)))
+        loss = loss_fn(x_adv)
         if loss < best_loss:
             best_loss = loss
             early_stopping_it = 0
