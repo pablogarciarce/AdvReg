@@ -288,7 +288,7 @@ class ClasBayesianNNVI(RegBayesianNNVI):
         """
         self.train = True
         # Define guide for VI
-        self.guide = autoguide.AutoDiagonalNormal(self.model) #  AutoBNAFNormal and AutoIAFNormal 
+        self.guide = autoguide.AutoLowRankMultivariateNormal(self.model) #  AutoBNAFNormal and AutoIAFNormal 
 
         # Set up the optimizer and loss function
         optimizer = numpyro.optim.Adam(step_size=lr)
