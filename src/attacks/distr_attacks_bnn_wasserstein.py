@@ -37,10 +37,10 @@ def inner_step(inner_nn_params, opt_state, y, y_adv, inner_optimizer, inner_nn_a
     return inner_nn_params, opt_state, loss
 
 #@partial(jax.jit, static_argnames=['model', 'num_samples', 'outer_optimizer', 'inner_nn_apply'])
-def outer_step(x_adv, opt_state, inner_nn_params, y, model, num_samples, outer_optimizer, inner_nn_apply):
+def outer_step(rng, x_adv, opt_state, inner_nn_params, y, model, num_samples, outer_optimizer, inner_nn_apply):
     """Perform one optimization step for x_adv."""
     def outer_loss(x_adv):
-        y_adv = model.sample_predictive_distribution(x_adv, num_samples=num_samples)
+        y_adv = model.sample_predictive_distribution(rng, x_adv, num_samples=num_samples)
         return wasserstein_distance(inner_nn_params, inner_nn_apply, y, y_adv)
 
     loss, grads = jax.value_and_grad(outer_loss)(x_adv)
@@ -57,7 +57,7 @@ def wasserstein_attack(model, x, appd, rng, epsilon=0.2, num_samples=100, inner_
     # Initialize the inner neural network
     rng, init_rng = random.split(rng)
     inner_nn = InnerNN()
-    inner_nn_params = inner_nn.init(init_rng, appd.sample(init_rng, (1,)))
+    inner_nn_params = inner_nn.init(init_rng, appd.sample(init_rng, (1, 1)))
     inner_nn_apply = inner_nn.apply
 
     # Initialize optimizers
@@ -73,7 +73,8 @@ def wasserstein_attack(model, x, appd, rng, epsilon=0.2, num_samples=100, inner_
         loss, inner_ite = jnp.inf, 0
         while loss > patience_eps and inner_ite < inner_iter:
             rng, sample_rng = random.split(rng)
-            y = model.sample_predictive_distribution(x_adv, num_samples=num_samples)
+            y = model.sample_predictive_distribution(sample_rng, x_adv, num_samples=num_samples)
+            rng, sample_rng = random.split(rng)
             y_adv = appd.sample(sample_rng, (num_samples, 1))
             inner_nn_params, inner_opt_state, loss = inner_step(
                 inner_nn_params, inner_opt_state, y, y_adv, inner_optimizer, inner_nn_apply
@@ -82,11 +83,13 @@ def wasserstein_attack(model, x, appd, rng, epsilon=0.2, num_samples=100, inner_
 
         # Outer optimization
         rng, sample_rng = random.split(rng)
-        y = model.sample_predictive_distribution(x_adv, num_samples=num_samples)
+        y = model.sample_predictive_distribution(sample_rng, x_adv, num_samples=num_samples)
+        rng, sample_rng = random.split(rng)
         y_adv = appd.sample(sample_rng, (num_samples, 1))
         x_adv_old = x_adv
+        rng, outer_rng = random.split(rng)
         x_adv, outer_opt_state, _ = outer_step(
-            x_adv, outer_opt_state, inner_nn_params, y, model, num_samples, outer_optimizer, inner_nn_apply
+            outer_rng, x_adv, outer_opt_state, inner_nn_params, y, model, num_samples, outer_optimizer, inner_nn_apply
         )
 
         # Project x_adv to L2 epsilon-ball of x

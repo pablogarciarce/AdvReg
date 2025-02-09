@@ -130,7 +130,7 @@ class DeepEnsemble(nnx.Module):
         logits = jnp.array([predictions[i] for i in indexes])
         return logits
 
-    def sample_predictive_distribution_probs(self, rng, X, num_samples=10):
+    def sample_predictive_distribution(self, rng, X, num_samples=10):
         """
         Computes the ensemble prediction for given inputs.
         """
@@ -139,17 +139,6 @@ class DeepEnsemble(nnx.Module):
         logits = jnp.array([predictions[i] for i in indexes])
         probs = jax.nn.softmax(logits, axis=1)
         return probs
-
-    def sample_predictive_distribution(self, rng, X, num_samples=10):
-        """
-        Computes the ensemble prediction for given inputs.
-        """
-        predictions = [model(X)[0] for model in self.models]
-        rng, ind_rng = jax.random.split(rng)
-        indexes = jax.random.randint(ind_rng, (num_samples,), 0, len(predictions))
-        logits = jnp.array([predictions[i] for i in indexes])
-        probs = jax.nn.softmax(logits, axis=1)
-        return numpyro.distributions.Categorical(probs).sample(rng, (num_samples,))
     
     def save(self, path):
         """

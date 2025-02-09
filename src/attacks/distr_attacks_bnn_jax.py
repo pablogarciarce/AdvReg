@@ -180,16 +180,19 @@ def fgsm_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=0.1, R=100, e
     """
     FGSM attack using the MLMC gradient estimator.
     """
-    x_adv = x + jax.random.normal(jax.random.PRNGKey(0), shape=x.shape) * 0.00001
+    lr = epsilon
+    n_iter = 1
+    rng, noise_rng = jax.random.split(jax.random.PRNGKey(0))
+    x_adv = x + jax.random.normal(noise_rng, shape=x.shape) * 0.00001
 
     for it in range(n_iter):
+        rng, sample_rng = jax.random.split(rng)
         if appd is None:
-            y = model.sample_predictive_distribution(x, num_samples=1)
+            y = model.sample_predictive_distribution(sample_rng, x, num_samples=1)
         else:
-            rng, sample_rng = jax.random.split(jax.random.PRNGKey(0))
             y = appd.sample(sample_rng)
-
-        grad = mlmc_gradient_estimator(y, x_adv, R, model)
+        rng, mlmc_rng = jax.random.split(rng)
+        grad = mlmc_gradient_estimator(mlmc_rng, y, x_adv, R, model)
         if appd is None:
             grad_sign = jnp.sign(grad)
         else:
@@ -198,4 +201,4 @@ def fgsm_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=0.1, R=100, e
         x_adv += lr * grad_sign
         x_adv = x + epsilon * (x_adv - x) / jnp.linalg.norm(x_adv - x, ord=2)
 
-    return x_adv
+    return x_adv, None
