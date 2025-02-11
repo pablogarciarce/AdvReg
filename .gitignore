@@ -1,3 +1,4 @@
 src/models/weights/*
 src/models/weights/30dbnn2
 data/*
+notebooks/xs

@@ -2,7 +2,9 @@ import numpy as np
 import torch
 from torch.optim import SGD
 
-from src.utils import id, l1_projection, l2_projection
+from src.utils import id
+from src.utils import _torch_l1_projection as l1_projection
+from src.utils import _torch_l2_projection as l2_projection
 
 
 
@@ -101,7 +103,7 @@ def attack_fgsm(x_clean, model, G, samples_per_iteration=1000, learning_rate=1e-
     x_0 = x_clean.clone().detach()
     x_adv = (x_clean + torch.randn_like(x_clean) * 0.002).clone().detach().requires_grad_(True)
 
-    optimizer = torch.optim.SGD([x_adv], lr=learning_rate)
+    optimizer = torch.optim.SGD([x_adv], lr=epsilon)
 
     x_adv.requires_grad = True
 

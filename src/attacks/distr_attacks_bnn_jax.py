@@ -114,7 +114,7 @@ def mlmc_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=0.1, R=100, e
     :param appd: Attacker predictive posterior distribution to approximate. If None -> Maximum disruption attack.
     """
     # Add noise to the initial input
-    rng = jax.random.PRNGKey(0)
+    rng = jax.random.PRNGKey(int(time() * 1e9) % 2**32)
     rng, noise_rng = jax.random.split(rng)
     x_adv = x + jax.random.normal(noise_rng, shape=x.shape) * 0.0001
 
@@ -182,7 +182,8 @@ def fgsm_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=0.1, R=100, e
     """
     lr = epsilon
     n_iter = 1
-    rng, noise_rng = jax.random.split(jax.random.PRNGKey(0))
+    rng = jax.random.PRNGKey(int(time() * 1e9) % 2**32)
+    rng, noise_rng = jax.random.split(rng)
     x_adv = x + jax.random.normal(noise_rng, shape=x.shape) * 0.00001
 
     for it in range(n_iter):

@@ -4,6 +4,7 @@ from jax import grad, jit
 from jax.random import normal
 from src.utils import id, l1_projection, l2_projection
 import optax
+from time import time
 
 
 def reparametrization_trick(rng, x_adv, model, G, samples_per_iteration, func, mnist_vi, x_0=None):
@@ -31,7 +32,7 @@ def reparametrization_trick(rng, x_adv, model, G, samples_per_iteration, func, m
 def attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3,
            num_iterations=1000, epsilon=0.1, func=id, early_stopping_patience=10, projection=l2_projection, mnist_vi=False):
     x_0 = x_clean.copy()
-    rng = jax.random.PRNGKey(0)
+    rng = jax.random.PRNGKey(int(time() * 1e9) % 2**32)
     rng, key = jax.random.split(rng)
     x_adv = x_clean + 0.2 * normal(key, shape=x_clean.shape)
     x_adv_values, loss_values, func_values = [], [], []
@@ -77,7 +78,7 @@ def fgsm_attack(x_clean, model, G, samples_per_iteration=100, learning_rate=1e-3
     learning_rate = epsilon
     num_iterations = 1
     x_0 = x_clean.copy()
-    rng = jax.random.PRNGKey(0)
+    rng = jax.random.PRNGKey(int(time() * 1e9) % 2**32)
     rng, key = jax.random.split(rng)
     x_adv = x_clean + 0.2 * normal(key, shape=x_clean.shape)
     x_adv_values, loss_values, func_values = [], [], []

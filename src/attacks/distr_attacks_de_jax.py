@@ -31,7 +31,7 @@ def pi(rng, y, x, model, M):
     """
     Compute pi(y | x, gamma).
     """
-    probs = model.sample_predictive_distribution_probs(rng, x, num_samples=M)
+    probs = model.sample_predictive_distribution(rng, x, num_samples=M)
     return probs[:, y]
 
 #@jit
@@ -71,7 +71,7 @@ def delta_g_x_l(rng, y, x, l, model, M_sequence):
     return g_l - (g_l_minus_1_a + g_l_minus_1_b) / 2
 
 
-def mlmc_gradient_estimator(y, x, R, model, M0=1, tau=1.1):
+def mlmc_gradient_estimator(y, x, R, model, M0=4, tau=2):
     """
     Estimate the gradient using MLMC.
     """
@@ -118,10 +118,10 @@ def mlmc_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=0.1, R=20, ea
         # Compute gradient using MLMC
         rng, sample_rng = jax.random.split(rng)
         if appd is None:
-            y = model.sample_predictive_distribution(sample_rng, x, num_samples=1)
+            y = model.sample_predictive_distribution(sample_rng, x, num_samples=1).argmax()
             grad = mlmc_gradient_estimator(y, x_adv, R, model)
         else:
-            y = appd.sample(sample_rng)
+            y = appd.sample(sample_rng).argmax()
             grad = -mlmc_gradient_estimator(y, x_adv, R, model)
             
         # Perform optimization step

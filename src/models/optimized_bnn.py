@@ -329,4 +329,22 @@ class ClasBayesianNNVI(RegBayesianNNVI):
         probs = samples["probs"]  # Shape: (num_samples, batch_size, num_classes)
 
         return probs
+
+    def sample_predictive_distribution_probs_softmax(self, rng, X_test, num_samples=100):
+        """
+        Computes the predictive distribution for given test inputs.
+        """
+        if self.svi_result is None:
+            raise RuntimeError("You must call 'fit' before making predictions.")
+
+        # Create predictive function
+        predictive = Predictive(self.model, guide=self.guide, params=self.svi_result, num_samples=num_samples)
+        samples = predictive(rng, X_test)
+
+        # Extract probabilities
+        probs = samples["probs"]  # Shape: (num_samples, batch_size, num_classes)
+        T = 0.01
+        probs = jnp.exp(probs/T) / jnp.sum(jnp.exp(probs/T))
+
+        return probs
     
