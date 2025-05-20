@@ -152,7 +152,7 @@ def fgsm_attack(model, x, appd=None, lr=0.01, n_iter=1000, epsilon=.1, R=100, ea
     :param appd: Attacker predictive posterior distribution to approximate. If None -> Maximum disruption attack.
     """
     x_adv = (x + torch.randn_like(x) * 0.00001).clone().requires_grad_(True)
-    optimizer = SGD([x_adv], lr=lr)
+    optimizer = SGD([x_adv], lr=epsilon)
 
     x_adv.requires_grad = True
     optimizer.zero_grad()
