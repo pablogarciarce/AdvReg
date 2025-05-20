@@ -24,7 +24,9 @@ In addition, the `AdvReg` package must be installed running the following in the
 
 - Section 5.3: Notebooks test_distr_bnn_jax.ipynb and test_point_bnn.ipynb.
 
-- Section 5.4: Notebooks test__mnist_jax_VI.ipynb. 
+- Section 5.4: Notebooks test__mnist_jax_VI.ipynb.
+
+- Section 5.5: Notebooks test_distr_bnn_jax_gray.ipynb and test_point_bnn_gray.ipynb.
 
 - Supplementary Section E: Notebooks toy_distr_dependent.ipynb, toy_distr.ipynb and toy_point.ipynb.
 
@@ -33,3 +35,5 @@ In addition, the `AdvReg` package must be installed running the following in the
 - Supplementary Section G: Notebooks test_distr_bnn_jax.ipynb and test_point_bnn.ipynb.
 
 - Supplementary Section H: Notebooks test__mnist_jax_VI.ipynb and test_point_de_jax.ipynb.
+
+- Supplementary Section I: Notebooks test_distr_bnn_jax_gray.ipynb and test_point_bnn_gray.ipynb.
