@@ -23,6 +23,7 @@ def plot_ppds(model, x, x_adv_distr, rng, appd=None, num_samples=100000, ax=None
         kde_appd = gaussian_kde(y_appd_samples)
 
     if ax is None:
+        plt.figure(figsize=(6, 4.5))
         plt.hist(y_samples, bins=50, alpha=0.5, label='Original', density=True)
         plt.hist(y_adv_samples, bins=50, alpha=0.5, label='Adversarial', density=True)
         if appd is not None:
@@ -45,6 +46,7 @@ def plot_ppds(model, x, x_adv_distr, rng, appd=None, num_samples=100000, ax=None
         plt.show()
 
     else:
+        plt.figure(figsize=(6, 4.5))
         ax.hist(y_samples, bins=50, alpha=0.5, label='Original', density=True)
         ax.hist(y_adv_samples, bins=50, alpha=0.5, label='Adversarial', density=True)
         if appd is not None:
