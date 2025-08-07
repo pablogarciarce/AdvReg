@@ -24,8 +24,8 @@ def plot_ppds(model, x, x_adv_distr, rng, appd=None, num_samples=100000, ax=None
 
     if ax is None:
         plt.figure(figsize=(6, 4.5))
-        plt.hist(y_samples, bins=50, alpha=0.5, label='Original', density=True)
-        plt.hist(y_adv_samples, bins=50, alpha=0.5, label='Adversarial', density=True)
+        plt.hist(y_samples, bins=50, alpha=0.5, label='Original PPD', density=True)
+        plt.hist(y_adv_samples, bins=50, alpha=0.5, label='Induced PPD', density=True)
         if appd is not None:
             plt.hist(y_appd_samples, bins=50, alpha=0.5, label='Objective APPD', density=True)
 
@@ -146,8 +146,9 @@ def _torch_plot_ppds(model, x, x_adv_distr, appd=None, num_samples=100000, ax=No
         kde_appd = gaussian_kde(y_appd_samples.T)
 
     if ax is None:
-        plt.hist(y_samples, bins=50, alpha=0.5, label='Original', density=True)
-        plt.hist(y_adv_samples, bins=50, alpha=0.5, label='Adversarial', density=True)
+        plt.figure(figsize=(6, 4.5))
+        plt.hist(y_samples, bins=50, alpha=0.5, label='Original PPD', density=True)
+        plt.hist(y_adv_samples, bins=50, alpha=0.5, label='Induced PPD', density=True)
         if appd is not None:
             plt.hist(y_appd_samples, bins=50, alpha=0.5, label='Objective APPD', density=True)
 
@@ -168,8 +169,9 @@ def _torch_plot_ppds(model, x, x_adv_distr, appd=None, num_samples=100000, ax=No
         plt.show()
 
     else:
-        ax.hist(y_samples, bins=50, alpha=0.5, label='Original', density=True)
-        ax.hist(y_adv_samples, bins=50, alpha=0.5, label='Adversarial', density=True)
+        plt.figure(figsize=(6, 4.5))
+        ax.hist(y_samples, bins=50, alpha=0.5, label='Original PPD', density=True)
+        ax.hist(y_adv_samples, bins=50, alpha=0.5, label='Induced PPD', density=True)
         if appd is not None:
             ax.hist(y_appd_samples, bins=50, alpha=0.5, label='Objective APPD', density=True)
 
